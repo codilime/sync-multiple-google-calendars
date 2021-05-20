@@ -1,13 +1,17 @@
 // Calendars to merge from.
-// "[X]" is what is placed in front of your calendar event in the shared calendar.
-// Use "" if you want none.
+// Emoji is placed in front of your calendar event in the target calendar.
+// Use '' if you want none.
 const CALENDARS_TO_MERGE = {
-  '[Personal]': 'calendar-id@gmail.com',
-  '[Work]': 'calendar-id@gmail.com',
+  '🏖️': 'calendar-id@gmail.com',
+  '💾': 'calendar-id@gmail.com',
 };
 
-// The ID of the shared calendar
-const CALENDAR_TO_MERGE_INTO = 'shared-calendar-id@gmail.com';
+// Tag that will be added to all synced events
+// EVENTS WITH THIS TAG WILL BE DELETED AND RECREATED AFTER EACH SCRIPT RUN
+const IGNORE_TAG = '↖️'
+
+// The ID of the calendar you want to merge to
+const CALENDAR_TO_MERGE_INTO = 'target-calendar-id@gmail.com';
 
 // Number of days in the future to run.
 const DAYS_TO_SYNC = 30;
@@ -15,20 +19,26 @@ const DAYS_TO_SYNC = 30;
 // ----------------------------------------------------------------------------
 // DO NOT TOUCH FROM HERE ON
 // ----------------------------------------------------------------------------
+function deleteCreatedEvents(startTime, endTime) {
+  let requestBody = [];
+  // Find events
+  const events = Calendar.Events.list(CALENDAR_TO_MERGE_INTO, {
+    timeMin: startTime.toISOString(),
+    timeMax: endTime.toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime',
+  });
 
-// Delete any old events that have been already cloned over.
-// This is basically a sync w/o finding and updating. Just deleted and recreate.
-function deleteEvents(startTime, endTime) {
-  const sharedCalendar = CalendarApp.getCalendarById(CALENDAR_TO_MERGE_INTO);
-  const events = sharedCalendar.getEvents(startTime, endTime);
-
-  const requestBody = events.map((e, i) => ({
-    method: 'DELETE',
-    endpoint: `https://www.googleapis.com/calendar/v3/calendars/${CALENDAR_TO_MERGE_INTO}/events/${e
-      .getId()
-      .replace('@google.com', '')}`,
-  }));
-
+  events.items.forEach((event) => {
+    // Delete events with summary starting with IGNORE_TAG
+    if (event.summary && String(event.summary).startsWith(IGNORE_TAG)) {
+      requestBody.push({
+        method: 'DELETE',
+        endpoint: `https://www.googleapis.com/calendar/v3/calendars/${CALENDAR_TO_MERGE_INTO}/events/${event.id}`
+      })
+    }
+  });
+  
   if (requestBody && requestBody.length) {
     const result = BatchRequest.EDo({
       useFetchAll: true,
@@ -77,7 +87,7 @@ function createEvents(startTime, endTime) {
         method: 'POST',
         endpoint: `https://www.googleapis.com/calendar/v3/calendars/${CALENDAR_TO_MERGE_INTO}/events`,
         requestBody: {
-          summary: `${calenderName} ${event.summary}`,
+          summary: `${IGNORE_TAG} ${calenderName} ${event.summary}`,
           location: event.location,
           description: event.description,
           start: event.start,
@@ -106,6 +116,7 @@ function SyncCalendarsIntoOne() {
   const endTime = new Date(startTime.valueOf());
   endTime.setDate(endTime.getDate() + DAYS_TO_SYNC);
 
-  deleteEvents(startTime, endTime);
+  deleteCreatedEvents(startTime, endTime);
+  // deleteEvents(startTime, endTime);
   createEvents(startTime, endTime);
 }
