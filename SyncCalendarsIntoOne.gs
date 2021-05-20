@@ -22,6 +22,13 @@ const DAYS_TO_SYNC = 30;
 // calendars.
 const IGNORE_EVENTS_WITH_SAME_START_AND_END_DATETIME = true;
 
+// The ID of the color to use for created events.
+// Pick one from the `events` section of the following API:
+// https://developers.google.com/calendar/v3/reference/colors/get
+// You can use the "Try this API" right sidebar to see the exact values.
+// Use `undefined` (without quotes) to use the default calendar color.
+const SYNCED_EVENTS_COLOR_ID = '5';
+
 // ----------------------------------------------------------------------------
 // DO NOT TOUCH FROM HERE ON
 // ----------------------------------------------------------------------------
@@ -108,6 +115,7 @@ function createEvents(startTime, endTime, originalEvents) {
           description: event.description,
           start: event.start,
           end: event.end,
+          colorId: SYNCED_EVENTS_COLOR_ID,
         },
       });
     });
