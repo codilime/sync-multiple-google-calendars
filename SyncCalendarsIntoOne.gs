@@ -29,6 +29,10 @@ const IGNORE_EVENTS_WITH_SAME_START_AND_END_DATETIME = true;
 // Use `undefined` (without quotes) to use the default calendar color.
 const SYNCED_EVENTS_COLOR_ID = '5';
 
+// Whether the disable the default reminders (e.g. 10 mins before the event)
+// for created events.
+const DISABLE_REMINDERS = true;
+
 // ----------------------------------------------------------------------------
 // DO NOT TOUCH FROM HERE ON
 // ----------------------------------------------------------------------------
@@ -116,6 +120,9 @@ function createEvents(startTime, endTime, originalEvents) {
           start: event.start,
           end: event.end,
           colorId: SYNCED_EVENTS_COLOR_ID,
+          reminders: {
+            useDefault: !DISABLE_REMINDERS,
+          },
         },
       });
     });
