@@ -117,6 +117,5 @@ function SyncCalendarsIntoOne() {
   endTime.setDate(endTime.getDate() + DAYS_TO_SYNC);
 
   deleteCreatedEvents(startTime, endTime);
-  // deleteEvents(startTime, endTime);
   createEvents(startTime, endTime);
 }
