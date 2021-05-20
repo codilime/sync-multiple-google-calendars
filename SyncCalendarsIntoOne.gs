@@ -103,7 +103,7 @@ function createEvents(startTime, endTime, originalEvents) {
         method: 'POST',
         endpoint: `https://www.googleapis.com/calendar/v3/calendars/${CALENDAR_TO_MERGE_INTO}/events`,
         requestBody: {
-          summary: `${IGNORE_TAG} ${calenderName} ${event.summary}`,
+          summary: `${IGNORE_TAG} ${calenderName} ${event.summary || 'Busy'}`,
           location: event.location,
           description: event.description,
           start: event.start,
