@@ -16,6 +16,23 @@ const CALENDAR_TO_MERGE_INTO = 'target-calendar-id@gmail.com';
 // Number of days in the future to run.
 const DAYS_TO_SYNC = 30;
 
+// Ignore events with the same start and end datetime as existing events.
+// Assume they have been copied from the CALENDAR_TO_MERGE_INTO
+// when running the script on multiple accounts to cross-synchronize
+// calendars.
+const IGNORE_EVENTS_WITH_SAME_START_AND_END_DATETIME = true;
+
+// The ID of the color to use for created events.
+// Pick one from the `events` section of the following API:
+// https://developers.google.com/calendar/v3/reference/colors/get
+// You can use the "Try this API" right sidebar to see the exact values.
+// Use `undefined` (without quotes) to use the default calendar color.
+const SYNCED_EVENTS_COLOR_ID = '5';
+
+// Whether the disable the default reminders (e.g. 10 mins before the event)
+// for created events.
+const DISABLE_REMINDERS = true;
+
 // ----------------------------------------------------------------------------
 // DO NOT TOUCH FROM HERE ON
 // ----------------------------------------------------------------------------
@@ -29,6 +46,8 @@ function deleteCreatedEvents(startTime, endTime) {
     orderBy: 'startTime',
   });
 
+  const originalEvents = [];
+
   events.items.forEach((event) => {
     // Delete events with summary starting with IGNORE_TAG
     if (event.summary && String(event.summary).startsWith(IGNORE_TAG)) {
@@ -36,6 +55,8 @@ function deleteCreatedEvents(startTime, endTime) {
         method: 'DELETE',
         endpoint: `https://www.googleapis.com/calendar/v3/calendars/${CALENDAR_TO_MERGE_INTO}/events/${event.id}`
       })
+    } else {
+      originalEvents.push(event);
     }
   });
   
@@ -49,9 +70,11 @@ function deleteCreatedEvents(startTime, endTime) {
   } else {
     console.log('No events to delete.');
   }
+
+  return originalEvents;
 }
 
-function createEvents(startTime, endTime) {
+function createEvents(startTime, endTime, originalEvents) {
   let requestBody = [];
 
   for (let calenderName in CALENDARS_TO_MERGE) {
@@ -83,15 +106,23 @@ function createEvents(startTime, endTime) {
         return;
       }
 
+      if (IGNORE_EVENTS_WITH_SAME_START_AND_END_DATETIME && originalEvents.find(originalEvent => originalEvent.start.dateTime === event.start.dateTime && originalEvent.end.dateTime === event.end.dateTime)) {
+        return;
+      }
+
       requestBody.push({
         method: 'POST',
         endpoint: `https://www.googleapis.com/calendar/v3/calendars/${CALENDAR_TO_MERGE_INTO}/events`,
         requestBody: {
-          summary: `${IGNORE_TAG} ${calenderName} ${event.summary}`,
+          summary: `${IGNORE_TAG} ${calenderName} ${event.summary || 'Busy'}`,
           location: event.location,
           description: event.description,
           start: event.start,
           end: event.end,
+          colorId: SYNCED_EVENTS_COLOR_ID,
+          reminders: {
+            useDefault: !DISABLE_REMINDERS,
+          },
         },
       });
     });
@@ -116,6 +147,6 @@ function SyncCalendarsIntoOne() {
   const endTime = new Date(startTime.valueOf());
   endTime.setDate(endTime.getDate() + DAYS_TO_SYNC);
 
-  deleteCreatedEvents(startTime, endTime);
-  createEvents(startTime, endTime);
+  const originalEvents = deleteCreatedEvents(startTime, endTime);
+  createEvents(startTime, endTime, originalEvents);
 }
